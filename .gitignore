@@ -1,0 +1,88 @@
+# -----------------------------
+# Logs
+# -----------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -----------------------------
+# Web / root (Vite + React)
+# -----------------------------
+node_modules
+dist
+dist-ssr
+*.local
+
+# -----------------------------
+# Editors / OS
+# -----------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# -----------------------------
+# Secrets / env (ALL layers)
+# -----------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+mobile/.env
+supabase/.env
+
+# -----------------------------
+# Mobile / Expo (mobile/)
+# -----------------------------
+mobile/node_modules
+mobile/.expo
+mobile/.expo-shared
+mobile/expo-home
+mobile/.cache
+mobile/assets/*.bak
+# Expo web build in mobile folder:
+mobile/web-build
+# If someone ever does expo prebuild locally:
+mobile/ios
+mobile/android
+
+# -----------------------------
+# Expo / EAS global
+# -----------------------------
+.expo
+.expo-shared
+.turtle
+# eas.json is COMMITTED (build profiles shared across team).
+# Only ignore EAS secrets/credentials:
+eas-credentials.json
+.eas-internal/
+
+# -----------------------------
+# Supabase local dev
+# -----------------------------
+.supabase
+supabase/branches
+supabase/.temp
+supabase/seed.ts.bak
+
+# -----------------------------
+# Misc
+# -----------------------------
+*.tmp
+*.bak
+coverage/
+*.tsbuildinfo
+npm-debug.log.*
+yarn-error.log.*
+

@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "WeGoFit",
+    "slug": "wegofit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "wegofit",
+    "plugins": [
+      "expo-location",
+      "expo-notifications"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "WeGoFit uses your location to track outdoor workouts."
+      }
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACTIVITY_RECOGNITION",
+        "POST_NOTIFICATIONS"
+      ]
+    }
+  }
+}

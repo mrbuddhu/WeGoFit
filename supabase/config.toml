@@ -1,0 +1,16 @@
+project_id = "wegofit"
+
+[functions.ai-coach]
+verify_jwt = true
+
+[functions.pesapal-credentials]
+verify_jwt = true
+
+[functions.pesapal-order]
+verify_jwt = true
+
+[functions.pesapal-ipn]
+verify_jwt = false
+
+[functions.send-receipt-email]
+verify_jwt = true
