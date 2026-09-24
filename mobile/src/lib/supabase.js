@@ -15,6 +15,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: false,
     flowType:           "implicit",
   },
+  realtime: {
+    logLevel: "warn",
+    heartbeatIntervalMs: 15000,
+  },
   global: {
     headers: {
       "X-Client-Info": "gofit-expo-snack",
@@ -22,4 +26,28 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
-export { supabase, SUPABASE_URL, SUPABASE_ANON_KEY };
+function subscribeTable(tableName, filter, handler) {
+  const { uid, eq } = filter || {};
+  const channelName = `realtime:${tableName}${uid ? `:user_id=eq.${uid}` : ""}${eq ? `:${eq}` : ""}`;
+  const channel = supabase.channel(channelName);
+  const onEvent = (evtType, rec) => {
+    try { handler(evtType, rec); } catch (_e) {}
+  };
+  const filterObj = uid ? { filter: `user_id=eq.${uid}` } : eq ? { filter: eq } : undefined;
+  channel
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: tableName, ...(filterObj || {}) }, (payload) => onEvent("INSERT", payload.new))
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: tableName, ...(filterObj || {}) }, (payload) => onEvent("UPDATE", { ...payload.new, _old: payload.old }))
+    .on("postgres_changes", { event: "DELETE", schema: "public", table: tableName, ...(filterObj || {}) }, (payload) => onEvent("DELETE", payload.old))
+    .subscribe();
+  return {
+    unsubscribe: () => {
+      try { supabase.removeChannel(channel); } catch (_e) {}
+    },
+  };
+}
+
+function uidFilter(userId) {
+  return userId ? { uid: userId } : {};
+}
+
+export { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, subscribeTable, uidFilter };

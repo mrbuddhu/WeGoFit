@@ -2,15 +2,15 @@ import React, { useState, useContext, useEffect, useRef } from "react"
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Modal, Platform, Linking, Image, ActivityIndicator, StyleSheet, TouchableWithoutFeedback, KeyboardAvoidingView } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import S from "../lib/styles"
-import { ROSE, C, SH, LOGO_URI, isVIPAccount, COACH_CREDENTIALS, PLAN_PRICE, planMRR, formatPrice } from "../lib/constants"
+import { ROSE, C, SH, LOGO_URI, isVIPAccount, COACH_CREDENTIALS, PLAN_PRICE, PLAN_PRICES, planMRR, formatPrice } from "../lib/constants"
 import { Ctx, PaywallCtx, useTheme } from "../contexts/AppContext"
 import { AuthCtx } from "../contexts/AuthContext"
 import { pwStrengthFull, EyeBtn } from "./SignInScreen"
 import * as Notifications from "expo-notifications"
 import { calcTargets, calcBMI, getBMICategory, getReferenceRange, getCalorieRangeNote } from "../utils/calculations"
 import { Card, PrimaryBtn, SecondaryBtn, Row, Spacer } from "../components/shared"
-import { BADGES, MILESTONE_LEVELS, ACHIEVEMENTS, SECURITY_QUESTIONS } from "../data/community"
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase"
+import { BADGES, MILESTONE_LEVELS, ACHIEVEMENTS } from "../data/community"
+import { supabase } from "../lib/supabase"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
 // ─── PROFILE ─────────────────────────────────────────────────────────────────
@@ -111,6 +111,7 @@ const ACHIEVEMENTS_LOCAL = [
 
 function ClientChangePwModal({ visible, onClose }) {
   const { profile } = useContext(Ctx);
+  const { session } = useContext(AuthCtx);
   const [curPw,    setCurPw]    = useState("");
   const [newPw,    setNewPw]    = useState("");
   const [confPw,   setConfPw]   = useState("");
@@ -132,27 +133,24 @@ function ClientChangePwModal({ visible, onClose }) {
     if (!curPw) { setError("Enter your current password."); return; }
     if (!newPw || newPw.length < 6) { setError("New password must be at least 6 characters."); return; }
     if (!match) { setError("New passwords do not match."); return; }
-    // Verify current password
-    const keys = await AsyncStorage.getAllKeys();
-    const profileKeys = keys.filter(k => k.startsWith("gf_profile"));
-    let found = false;
-    for (const k of profileKeys) {
-      const raw = await AsyncStorage.getItem(k);
-      if (!raw) continue;
-      const prof = JSON.parse(raw);
-      if (prof.email && profile?.email && prof.email.toLowerCase() === profile.email.toLowerCase()) {
-        if (prof.password !== btoa(curPw)) { setError("Current password is incorrect."); return; }
-        setBusy(true);
-        prof.password = btoa(newPw);
-        await AsyncStorage.setItem(k, JSON.stringify(prof));
-        found = true;
-        break;
-      }
+    setBusy(true);
+    try {
+      const userEmail = profile?.email || session?.email || "";
+      if (!userEmail) throw new Error("Could not verify account. Please try again.");
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: curPw,
+      });
+      if (signInErr) throw new Error("Current password is incorrect.");
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+      if (updateErr) throw new Error(updateErr.message);
+      setBusy(false);
+      setDone(true);
+      setTimeout(() => { onClose(); reset(); }, 1800);
+    } catch (e) {
+      setBusy(false);
+      setError(e?.message || "Could not update password. Please try again.");
     }
-    setBusy(false);
-    if (!found) { setError("Could not verify account. Please try again."); return; }
-    setDone(true);
-    setTimeout(() => { onClose(); reset(); }, 1800);
   }
 
   const newPwRef  = useRef(null);
@@ -554,7 +552,7 @@ export function ProfileScreen({ navigation }) {
         }}>
           {/* Logo top-left */}
           <View style={{ position: "absolute", top: 16, left: 16 }}>
-            <Image source={LOGO_URI} style={{ width: 160, height: 65, resizeMode: "contain" }} />
+            <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 160, height: 65, resizeMode: "contain" }} />
           </View>
 
           {/* Plan badge top-right */}
@@ -868,7 +866,13 @@ export function ProfileScreen({ navigation }) {
             );
 
             // Urgency + pricing
-            const PricingCards = ({ daysLeft }) => (
+            const PricingCards = ({ daysLeft }) => {
+              const annualTotalUSD = PLAN_PRICES.annual.USD;
+              const annualTotalUGX = PLAN_PRICES.annual.UGX;
+              const annualPerMoUSD = (annualTotalUSD / 12).toFixed(2);
+              const annualPerMoUGX = Math.round(annualTotalUGX / 12).toLocaleString();
+              const savePct = Math.round((1 - annualTotalUSD / (PLAN_PRICES.monthly.USD * 12)) * 100);
+              return (
               <>
                 {daysLeft != null && (
                   <Text style={{ color: ROSE, fontSize: 13, fontWeight: "700", textAlign: "center", marginBottom: 6 }}>
@@ -884,11 +888,11 @@ export function ProfileScreen({ navigation }) {
                     flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View>
                     <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 15 }}>Annual Plan 🏆</Text>
-                    <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12 }}>$192/year · Save 20% · Best Value</Text>
+                    <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12 }}>{`${formatPrice("annual", "USD")}/year · Save ${savePct}% · Best Value`}</Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 18 }}>$16/mo</Text>
-                    <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 10 }}>≈ UGX 58,400/mo</Text>
+                    <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 18 }}>{`$${annualPerMoUSD}/mo`}</Text>
+                    <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 10 }}>{`≈ UGX ${annualPerMoUGX}/mo`}</Text>
                     <View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 10,
                       paddingHorizontal: 8, paddingVertical: 2, marginTop: 2 }}>
                       <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "700" }}>MOST POPULAR</Text>
@@ -905,8 +909,8 @@ export function ProfileScreen({ navigation }) {
                     <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>Flexible · Cancel anytime</Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ color: ROSE, fontWeight: "700", fontSize: 18 }}>$20/mo</Text>
-                    <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10 }}>≈ UGX 73,000/mo</Text>
+                    <Text style={{ color: ROSE, fontWeight: "700", fontSize: 18 }}>{`${formatPrice("monthly", "USD")}/mo`}</Text>
+                    <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10 }}>{`≈ ${formatPrice("monthly", "UGX")}/mo`}</Text>
                   </View>
                 </TouchableOpacity>
                 {/* Trust footer */}
@@ -920,7 +924,8 @@ export function ProfileScreen({ navigation }) {
                   Cancel anytime · No hidden fees · Your data is always private.
                 </Text>
               </>
-            );
+              );
+            };
 
             // VIP or active paid subscriber
             if (isVIP || isPremium || paywallCtx.subStatus === "active") {
@@ -958,8 +963,9 @@ export function ProfileScreen({ navigation }) {
                       </Text>
                       <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13 }}>
                         {isVIP ? "Full premium access · Complimentary"
-                          : isAnnual ? "$16/month (UGX 58,400) · Billed $192/year"
-                          : "$20/month (UGX 73,000) · Billed monthly"}
+                          : isAnnual
+                            ? `$${(PLAN_PRICES.annual.USD / 12).toFixed(2)}/month (${formatPrice("annual", "UGX")}/year) · Billed annually`
+                            : `${formatPrice("monthly", "USD")}/month (${formatPrice("monthly", "UGX")}) · Billed monthly`}
                       </Text>
                       {!isVIP && lastPayment && (
                         <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, marginTop: 4 }}>
@@ -1008,7 +1014,7 @@ export function ProfileScreen({ navigation }) {
                                 flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                               <View>
                                 <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 15 }}>Switch to Annual 🏆</Text>
-                                <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>Save 20% · $16/mo (UGX 58,400)</Text>
+                                <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>{`Save ${Math.round((1 - PLAN_PRICES.annual.USD / (PLAN_PRICES.monthly.USD * 12)) * 100)}% · $${(PLAN_PRICES.annual.USD / 12).toFixed(2)}/mo (${formatPrice("annual", "UGX")}/yr)`}</Text>
                               </View>
                               <Text style={{ color: "#FFFFFF", fontSize: 20 }}>›</Text>
                             </TouchableOpacity>
@@ -1628,5 +1634,4 @@ export {
   SettingsSection,
   Sheet,
   ClientChangePwModal,
-  ProfileScreen,
 };

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useContext } from "react"
 import { View, Text, ScrollView, TouchableOpacity, Modal, FlatList, Alert, Image, TextInput } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { StatusBar } from "expo-status-bar"
 import S from "../lib/styles"
 import { ROSE, C, SH, COACH_CREDENTIALS } from "../lib/constants"
-import { PRESET_CHALLENGES, CHALLENGE_TYPE_COLORS, MOCK_LEADERBOARD } from "../data/community"
+import { PRESET_CHALLENGES, CHALLENGE_TYPE_COLORS } from "../data/community"
 import { Card, Row, Spacer } from "../components/shared"
 import { supabase } from "../lib/supabase"
+import { Ctx } from "../contexts/AppContext"
 
 // ─── COACH CHALLENGES SCREEN ──────────────────────────────────────────────────
 export function ParticipantsModal({ challenge, onClose }) {
@@ -119,6 +120,9 @@ export function CoachChallenges() {
   const [duration,        setDuration]        = useState("7");
   const [prize,           setPrize]           = useState("");
   const [viewChallenge,   setViewChallenge]   = useState(null);
+  const { leaderboard, fetchLeaderboard } = useContext(Ctx);
+
+  useEffect(() => { fetchLeaderboard?.(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   async function handleCreate() {
     if (!title.trim()) return;
@@ -202,8 +206,12 @@ export function CoachChallenges() {
 
         {/* Leaderboard view */}
         <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16, marginTop: 20, marginBottom: 12 }}>Client Leaderboard</Text>
-        {MOCK_LEADERBOARD.map(u => (
-          <View key={u.rank} style={{ backgroundColor: "#111827", borderRadius: 12, padding: 12, marginBottom: 8,
+        {(leaderboard || []).length === 0 ? (
+          <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, paddingVertical: 12, textAlign: "center" }}>
+            No points on the board yet — it fills up as clients log meals & workouts.
+          </Text>
+        ) : (leaderboard || []).map(u => (
+          <View key={u.user_id || u.rank} style={{ backgroundColor: "#111827", borderRadius: 12, padding: 12, marginBottom: 8,
             flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
             <Text style={{ color: "rgba(255,255,255,0.45)", fontWeight: "700", width: 24, fontSize: 14 }}>#{u.rank}</Text>
             <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: u.color,

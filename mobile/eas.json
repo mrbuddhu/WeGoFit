@@ -1,0 +1,67 @@
+{
+  "cli": {
+    "version": ">= 10.0.0",
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "development": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "withoutCredentials": true
+      },
+      "ios": {
+        "buildConfiguration": "Debug",
+        "simulator": true
+      },
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dthlhxochcwcjduuugbv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0aGxoeG9jaGN3Y2pkdXV1Z2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzk5OTksImV4cCI6MjA5MzkxNTk5OX0.j8J6HHuI7u_3L8TxrZoGGyV4n5amfT766uuya18iVHk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dthlhxochcwcjduuugbv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0aGxoeG9jaGN3Y2pkdXV1Z2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzk5OTksImV4cCI6MjA5MzkxNTk5OX0.j8J6HHuI7u_3L8TxrZoGGyV4n5amfT766uuya18iVHk"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://dthlhxochcwcjduuugbv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0aGxoeG9jaGN3Y2pkdXV1Z2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzk5OTksImV4cCI6MjA5MzkxNTk5OX0.j8J6HHuI7u_3L8TxrZoGGyV4n5amfT766uuya18iVHk"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {
+        "appleId": "TODO-APPLE-ID",
+        "ascAppId": "TODO-ASC-APP-ID",
+        "appleTeamId": "TODO-APPLE-TEAM-ID"
+      }
+    }
+  }
+}

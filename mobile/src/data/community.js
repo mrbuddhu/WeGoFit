@@ -47,19 +47,6 @@ const MILESTONE_LEVELS = [
   { min: 900,  max: 1170, level: "Elite",     emoji: "👑", tagline: "WeGoFit Legend",      perk: "Permanent Legend crown + personal shoutout from Coach TinaBarks",         color: "#FFD700" },
 ];
 
-const MOCK_LEADERBOARD = [
-  { rank:1,  name:"Sarah K.",  initials:"SK", points:2840, streak:21, plan:"annual",  color:"#F43F8E" },
-  { rank:2,  name:"John D.",   initials:"JD", points:1920, streak:14, plan:"monthly", color:"#6366F1" },
-  { rank:3,  name:"Mary L.",   initials:"ML", points:1640, streak:8,  plan:"annual",  color:"#10B981" },
-  { rank:4,  name:"Anna B.",   initials:"AB", points:1420, streak:5,  plan:"annual",  color:"#F59E0B" },
-  { rank:5,  name:"Mike R.",   initials:"MR", points:1180, streak:2,  plan:"monthly", color:"#7C3AED" },
-  { rank:6,  name:"Grace N.",  initials:"GN", points:1060, streak:12, plan:"monthly", color:"#FB923C" },
-  { rank:7,  name:"David O.",  initials:"DO", points:940,  streak:6,  plan:"annual",  color:"#3B82F6" },
-  { rank:8,  name:"Faith M.",  initials:"FM", points:820,  streak:4,  plan:"monthly", color:"#EC4899" },
-  { rank:9,  name:"Peter K.",  initials:"PK", points:710,  streak:3,  plan:"free",    color:"#14B8A6" },
-  { rank:10, name:"Joyce W.",  initials:"JW", points:580,  streak:1,  plan:"monthly", color:"#8B5CF6" },
-];
-
 const MOCK_FEED = [
   { id:"f0",   userId:"coach", userName:"Coach TinaBarks", userInitials:"CT", isCoach:true, isPinned:true, type:"announcement", content:"Welcome to the WeGoFit Squad! 🎉 This is YOUR space to celebrate wins, share progress and motivate each other. Every step counts! Let's crush our goals together! 💪", emoji:"🌸", likes:47, likedBy:[], comments:12, postedAt: new Date(Date.now()-7200000).toISOString() },
   { id:"f1",   userId:"mock_sarah",  userName:"Sarah K.",  userInitials:"SK", type:"workout",     content:"Just completed my first 5K run! Feeling absolutely amazing!", emoji:"🏃", stats:{ distance:"5.2km", duration:"32:14", calories:312 }, likes:8,  likedBy:[], comments:3,  postedAt: new Date(Date.now()-7200000).toISOString()   },
@@ -118,6 +105,6 @@ const ACHIEVEMENTS = [
 
 export {
   POINTS, RARITY_CONFIG, BADGES, BADGE_CATEGORIES, MILESTONE_LEVELS,
-  MOCK_LEADERBOARD, MOCK_FEED, PRESET_CHALLENGES, CHALLENGE_TYPE_COLORS,
+  MOCK_FEED, PRESET_CHALLENGES, CHALLENGE_TYPE_COLORS,
   SLEEP_TIPS, SECURITY_QUESTIONS, ACHIEVEMENTS,
 };

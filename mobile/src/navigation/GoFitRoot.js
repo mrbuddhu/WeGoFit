@@ -416,7 +416,7 @@ function GoFitRoot() {
   if (launching || authLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#0A0A14", alignItems: "center", justifyContent: "center" }}>
-        <Image source={require("../../public/Enhanced_Logo.PNG")} style={{ width: 220, height: 90, resizeMode: "contain" }} />
+        <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 220, height: 90, resizeMode: "contain" }} />
         <ActivityIndicator color={ROSE} style={{ marginTop: 24 }} size="small" />
       </View>
     );
@@ -668,7 +668,7 @@ function ClientApp() {
   if (loading || subStatus === "loading") {
     return (
       <View style={{ flex: 1, backgroundColor: "#1A1A2E", alignItems: "center", justifyContent: "center" }}>
-        <Image source={LOGO_URI} style={{ width: 180, height: 180, resizeMode: "contain", marginBottom: 8 }} />
+        <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 180, height: 180, resizeMode: "contain", marginBottom: 8 }} />
         <Text style={{ color: "#FFFFFF99", fontSize: 14, fontWeight: "500", letterSpacing: 0.5, marginBottom: 24 }}>Better Habits. Better You.</Text>
         <ActivityIndicator color={ROSE} style={{ marginTop: 12 }} />
       </View>

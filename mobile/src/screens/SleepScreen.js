@@ -444,7 +444,7 @@ export function SleepScreen({ navigation }) {
               Track your rest, fuel your best
             </Text>
           </View>
-          <Image source={LOGO_URI} style={{ width: 80, height: 40, resizeMode: "contain" }} />
+          <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 80, height: 40, resizeMode: "contain" }} />
         </View>
 
         {/* Today's sleep card */}

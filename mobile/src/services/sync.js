@@ -27,6 +27,172 @@ async function upsertProfileToSupabase(userId, email, profileData) {
   } catch (_e) {}
 }
 
+async function loadProfileFromSupabase(userId) {
+  if (!userId) return null;
+  try {
+    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).limit(1).maybeSingle();
+    if (error) { console.log("Profile load error:", error.message); return null; }
+    return data || null;
+  } catch (_e) { return null; }
+}
+
+async function loadFoodsFromSupabase(userId, date) {
+  if (!userId) return [];
+  const d = date || todayKey();
+  try {
+    const { data, error } = await supabase
+      .from("food_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("date", d)
+      .order("created_at", { ascending: true });
+    if (error) { console.log("Foods load error:", error.message); return []; }
+    return data || [];
+  } catch (_e) { return []; }
+}
+
+async function loadExercisesFromSupabase(userId, date) {
+  if (!userId) return [];
+  const d = date || todayKey();
+  try {
+    const { data, error } = await supabase
+      .from("exercise_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("date", d)
+      .order("created_at", { ascending: true });
+    if (error) { console.log("Exercises load error:", error.message); return []; }
+    return data || [];
+  } catch (_e) { return []; }
+}
+
+async function loadWaterFromSupabase(userId, date) {
+  if (!userId) return 0;
+  const d = date || todayKey();
+  try {
+    const { data, error } = await supabase
+      .from("water_logs")
+      .select("litres")
+      .eq("user_id", userId)
+      .eq("date", d)
+      .limit(1)
+      .maybeSingle();
+    if (error) { console.log("Water load error:", error.message); return 0; }
+    return data?.litres ? Number(data.litres) : 0;
+  } catch (_e) { return 0; }
+}
+
+async function loadWeightHistoryFromSupabase(userId) {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from("weight_logs")
+      .select("date, weight_kg")
+      .eq("user_id", userId)
+      .order("date", { ascending: true });
+    if (error) { console.log("Weights load error:", error.message); return []; }
+    return (data || []).map(r => ({ date: String(r.date), weight_kg: Number(r.weight_kg) }));
+  } catch (_e) { return []; }
+}
+
+async function loadSleepHistoryFromSupabase(userId) {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from("sleep_logs")
+      .select("date, bed_time, wake_time, duration, quality, notes")
+      .eq("user_id", userId)
+      .order("date", { ascending: true });
+    if (error) { console.log("Sleep load error:", error.message); return []; }
+    return (data || []).map(r => ({
+      date: String(r.date),
+      bedTime: r.bed_time || "", bed_time: r.bed_time || "",
+      wakeTime: r.wake_time || "", wake_time: r.wake_time || "",
+      duration: Number(r.duration),
+      quality: r.quality || "",
+      notes: r.notes || "",
+      loggedAt: new Date().toISOString(),
+    }));
+  } catch (_e) { return []; }
+}
+
+async function loadSleepFromSupabase(userId, date) {
+  if (!userId) return null;
+  const d = date || todayKey();
+  try {
+    const { data, error } = await supabase
+      .from("sleep_logs")
+      .select("date, bed_time, wake_time, duration, quality, notes")
+      .eq("user_id", userId)
+      .eq("date", d)
+      .limit(1)
+      .maybeSingle();
+    if (error) return null;
+    if (!data) return null;
+    return {
+      date: String(data.date),
+      bedTime: data.bed_time || "",
+      wakeTime: data.wake_time || "",
+      duration: Number(data.duration),
+      quality: data.quality || "",
+      notes: data.notes || "",
+    };
+  } catch (_e) { return null; }
+}
+
+async function loadSquadFeedFromSupabase(limit = 50) {
+  try {
+    const { data, error } = await supabase
+      .from("squad_feed")
+      .select("*")
+      .order("is_pinned", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) { console.log("Squad feed load error:", error.message); return []; }
+    return data || [];
+  } catch (_e) { return []; }
+}
+
+async function loadSquadCommentsFromSupabase(postIds) {
+  if (!postIds || postIds.length === 0) return [];
+  try {
+    const { data, error } = await supabase
+      .from("squad_comments")
+      .select("*")
+      .in("post_id", postIds)
+      .order("created_at", { ascending: true });
+    if (error) return [];
+    return data || [];
+  } catch (_e) { return []; }
+}
+
+async function loadMyChallengesFromSupabase(userId) {
+  if (!userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from("challenge_participants")
+      .select("challenge_id, progress, is_active, completed_at, goal_target")
+      .eq("user_id", userId);
+    if (error) return [];
+    return data || [];
+  } catch (_e) { return []; }
+}
+
+async function loadSubscriptionsFromSupabase(userId) {
+  if (!userId) return null;
+  try {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return null;
+    return data || null;
+  } catch (_e) { return null; }
+}
+
 async function syncFoodLog(food, userId) {
   if (!userId) return;
   try {
@@ -127,5 +293,16 @@ function getAuthErrorMessage(error) {
 export {
   upsertProfileToSupabase,
   syncFoodLog, syncSleepLog, syncExerciseLog, syncWaterLog, syncWeightLog,
+  loadProfileFromSupabase,
+  loadFoodsFromSupabase,
+  loadExercisesFromSupabase,
+  loadWaterFromSupabase,
+  loadWeightHistoryFromSupabase,
+  loadSleepHistoryFromSupabase,
+  loadSleepFromSupabase,
+  loadSquadFeedFromSupabase,
+  loadSquadCommentsFromSupabase,
+  loadMyChallengesFromSupabase,
+  loadSubscriptionsFromSupabase,
   getAuthErrorMessage,
 };

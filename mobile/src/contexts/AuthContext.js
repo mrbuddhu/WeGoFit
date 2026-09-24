@@ -73,13 +73,6 @@ function AuthProvider({ children }) {
   async function login(email, password) {
     const trimEmail = email.trim().toLowerCase();
 
-    if (trimEmail === COACH_CREDENTIALS.email.toLowerCase() && btoa(password) === COACH_CREDENTIALS.password) {
-      const s = { userId: COACH_CREDENTIALS.id, userType: "coach", name: COACH_CREDENTIALS.name, email: COACH_CREDENTIALS.email, loginTime: new Date().toISOString() };
-      await AsyncStorage.setItem("gofit_session", JSON.stringify(s));
-      setSession(s);
-      return { ok: true, type: "coach" };
-    }
-
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: trimEmail, password });
       if (error) throw error;
@@ -193,9 +186,6 @@ function AuthProvider({ children }) {
 
       const newClient = {
         id: userId, type: "client", name: data.name, email: trimEmail,
-        password: btoa(data.password),
-        securityQuestion: data.securityQuestion || "What year were you born?",
-        securityAnswer:   data.securityAnswer ? btoa(data.securityAnswer.toLowerCase().trim()) : "",
         plan: isVIPAccount(trimEmail) ? "annual" : "free",
         goal: "Improve Fitness", calories: 0, target: 2000, sleep: 0, streak: 0,
         weight: 0, goalWeight: 0, age: 0, gender: "other", height: 0,
@@ -226,22 +216,12 @@ function AuthProvider({ children }) {
   }
 
   async function updateClientPassword(email, newPassword) {
-    const trimEmail = email.trim().toLowerCase();
-    const updated = clients.map(c =>
-      c.email.toLowerCase() === trimEmail ? { ...c, password: btoa(newPassword) } : c
-    );
-    setClients(updated);
-    const registered = updated.filter(c => !c.id.startsWith("mock_"));
-    await AsyncStorage.setItem("gofit_clients", JSON.stringify(registered));
-    const keys = await AsyncStorage.getAllKeys();
-    for (const k of keys.filter(k => k.startsWith("gf_profile"))) {
-      const raw = await AsyncStorage.getItem(k);
-      if (!raw) continue;
-      const prof = JSON.parse(raw);
-      if (prof.email && prof.email.toLowerCase() === trimEmail) {
-        await AsyncStorage.setItem(k, JSON.stringify({ ...prof, password: btoa(newPassword) }));
-        break;
-      }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e?.message || "Failed to update password." };
     }
   }
 

@@ -2,8 +2,10 @@
  WeGoFit portable database export
 
  Apply this file to a fresh Supabase-compatible PostgreSQL database in the order shown below.
- It includes tables, row-level security policies, indexes, and protected RPC functions.
+ It includes tables, row-level security policies, indexes, realtime publication, and protected RPC functions.
  Existing user rows and auth accounts are not included; export those separately from the source project.
+
+ Regenerated 2026-09-24T02:28:53Z from all 15 migrations in supabase/migrations/ (timestamp order).
 */
 
 /* ===== 20260509155117_create_gofit_tables.sql ===== */
@@ -167,133 +169,6 @@ CREATE INDEX IF NOT EXISTS food_log_user_date ON food_log(user_id, date);
 CREATE INDEX IF NOT EXISTS exercise_log_user_date ON exercise_log(user_id, date);
 CREATE INDEX IF NOT EXISTS weight_log_user_date ON weight_log(user_id, date);
 
-
-/* ===== Portable compatibility additions =====
- These columns and tables are declared before RPC functions because the historical
- migration set introduced some client-facing fields and plural log tables later.
-*/
-ALTER TABLE profiles
-  ADD COLUMN IF NOT EXISTS email text,
-  ADD COLUMN IF NOT EXISTS weight_kg numeric,
-  ADD COLUMN IF NOT EXISTS goal_weight numeric,
-  ADD COLUMN IF NOT EXISTS activity text,
-  ADD COLUMN IF NOT EXISTS subscription text NOT NULL DEFAULT 'free',
-  ADD COLUMN IF NOT EXISTS onboarded boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS calories int NOT NULL DEFAULT 1800,
-  ADD COLUMN IF NOT EXISTS protein int NOT NULL DEFAULT 135,
-  ADD COLUMN IF NOT EXISTS carbs int NOT NULL DEFAULT 180,
-  ADD COLUMN IF NOT EXISTS fat int NOT NULL DEFAULT 60,
-  ADD COLUMN IF NOT EXISTS is_vip boolean NOT NULL DEFAULT false;
-
-CREATE TABLE IF NOT EXISTS food_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  meal text NOT NULL DEFAULT 'snacks',
-  food_name text NOT NULL DEFAULT '',
-  calories numeric NOT NULL DEFAULT 0,
-  protein numeric NOT NULL DEFAULT 0,
-  carbs numeric NOT NULL DEFAULT 0,
-  fat numeric NOT NULL DEFAULT 0,
-  quantity numeric NOT NULL DEFAULT 1,
-  unit text NOT NULL DEFAULT 'g',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE IF NOT EXISTS sleep_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  bed_time text NOT NULL DEFAULT '',
-  wake_time text NOT NULL DEFAULT '',
-  duration numeric NOT NULL DEFAULT 0,
-  quality text NOT NULL DEFAULT '',
-  notes text NOT NULL DEFAULT '',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, date)
-);
-CREATE TABLE IF NOT EXISTS exercise_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  name text NOT NULL DEFAULT '',
-  duration_min int NOT NULL DEFAULT 0,
-  calories_burned numeric NOT NULL DEFAULT 0,
-  distance_km numeric NOT NULL DEFAULT 0,
-  avg_speed numeric NOT NULL DEFAULT 0,
-  step_count int NOT NULL DEFAULT 0,
-  integrity_score numeric NOT NULL DEFAULT 0,
-  verified boolean NOT NULL DEFAULT false,
-  source text NOT NULL DEFAULT 'MANUAL',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE TABLE IF NOT EXISTS water_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  litres numeric NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, date)
-);
-CREATE TABLE IF NOT EXISTS weight_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  weight_kg numeric NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, date)
-);
-
-ALTER TABLE food_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sleep_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE exercise_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE water_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE weight_logs ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "food_logs_select_own" ON food_logs;
-CREATE POLICY "food_logs_select_own" ON food_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
-DROP POLICY IF EXISTS "food_logs_insert_own" ON food_logs;
-CREATE POLICY "food_logs_insert_own" ON food_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "food_logs_update_own" ON food_logs;
-CREATE POLICY "food_logs_update_own" ON food_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "food_logs_delete_own" ON food_logs;
-CREATE POLICY "food_logs_delete_own" ON food_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "sleep_logs_select_own" ON sleep_logs;
-CREATE POLICY "sleep_logs_select_own" ON sleep_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
-DROP POLICY IF EXISTS "sleep_logs_insert_own" ON sleep_logs;
-CREATE POLICY "sleep_logs_insert_own" ON sleep_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "sleep_logs_update_own" ON sleep_logs;
-CREATE POLICY "sleep_logs_update_own" ON sleep_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "sleep_logs_delete_own" ON sleep_logs;
-CREATE POLICY "sleep_logs_delete_own" ON sleep_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "exercise_logs_select_own" ON exercise_logs;
-CREATE POLICY "exercise_logs_select_own" ON exercise_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
-DROP POLICY IF EXISTS "exercise_logs_insert_own" ON exercise_logs;
-CREATE POLICY "exercise_logs_insert_own" ON exercise_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "exercise_logs_update_own" ON exercise_logs;
-CREATE POLICY "exercise_logs_update_own" ON exercise_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "exercise_logs_delete_own" ON exercise_logs;
-CREATE POLICY "exercise_logs_delete_own" ON exercise_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "water_logs_select_own" ON water_logs;
-CREATE POLICY "water_logs_select_own" ON water_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
-DROP POLICY IF EXISTS "water_logs_insert_own" ON water_logs;
-CREATE POLICY "water_logs_insert_own" ON water_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "water_logs_update_own" ON water_logs;
-CREATE POLICY "water_logs_update_own" ON water_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "water_logs_delete_own" ON water_logs;
-CREATE POLICY "water_logs_delete_own" ON water_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "weight_logs_select_own" ON weight_logs;
-CREATE POLICY "weight_logs_select_own" ON weight_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
-DROP POLICY IF EXISTS "weight_logs_insert_own" ON weight_logs;
-CREATE POLICY "weight_logs_insert_own" ON weight_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "weight_logs_update_own" ON weight_logs;
-CREATE POLICY "weight_logs_update_own" ON weight_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-DROP POLICY IF EXISTS "weight_logs_delete_own" ON weight_logs;
-CREATE POLICY "weight_logs_delete_own" ON weight_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
-
 /* ===== 20260516065750_create_delete_user_rpc.sql ===== */
 /*
   # Create delete_user RPC function
@@ -314,7 +189,6 @@ BEGIN
   DELETE FROM auth.users WHERE id = auth.uid();
 END;
 $$;
-
 
 /* ===== 20260516094748_create_update_profile_rpc.sql ===== */
 /*
@@ -384,7 +258,6 @@ BEGIN
     onboarded   = true;
 END;
 $$;
-
 
 /* ===== 20260516103418_create_log_rpc_functions.sql ===== */
 /*
@@ -556,7 +429,6 @@ BEGIN
 END;
 $$;
 
-
 /* ===== 20260518201116_fix_rpc_security.sql ===== */
 /*
   # Fix RPC function security issues
@@ -598,7 +470,6 @@ REVOKE EXECUTE ON FUNCTION insert_exercise_log(uuid, text, text, int, numeric, n
 REVOKE EXECUTE ON FUNCTION upsert_water_log(uuid, text, numeric) FROM anon;
 REVOKE EXECUTE ON FUNCTION insert_weight_log(uuid, text, numeric) FROM anon;
 REVOKE EXECUTE ON FUNCTION update_profile(uuid, text, int, text, numeric, numeric, numeric, text, text, int, int, int, int) FROM anon;
-
 
 /* ===== 20260518211538_create_subscriptions_table.sql ===== */
 /*
@@ -662,7 +533,6 @@ CREATE POLICY "Users can update own subscriptions"
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
-
 
 /* ===== 20260525173133_create_squad_tables.sql ===== */
 /*
@@ -806,7 +676,6 @@ CREATE POLICY "Users can update own challenge_participants"
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
-
 /* ===== 20260525180331_fix_squad_feed_rls.sql ===== */
 /*
   # Fix squad_feed RLS policies
@@ -899,14 +768,11 @@ CREATE POLICY "Users can delete own posts or coaches delete any"
     )
   );
 
-
 /* ===== 20260607155145_add_start_date_to_subscriptions.sql ===== */
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS start_date timestamptz;
-
 /* ===== 20260607155515_add_paid_at_next_billing_date_to_subscriptions.sql ===== */
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS paid_at timestamptz;
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS next_billing_date timestamptz;
-
 /* ===== 20260613140107_add_new_profile_columns.sql ===== */
 ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS email text,
@@ -916,4 +782,360 @@ ALTER TABLE profiles
   ADD COLUMN IF NOT EXISTS subscription text NOT NULL DEFAULT 'free',
   ADD COLUMN IF NOT EXISTS onboarded boolean NOT NULL DEFAULT false;
 
+/* ===== 20260922000001_create_plural_log_tables.sql ===== */
+/*
+  Realtime Migration 1 — Create plural log tables referenced by insert_* / upsert_* RPCs
+  (Additive, zero-downtime, idempotent, zero UI/feature risk)
 
+  Background: Migration 20260509 created tables `food_log`, `exercise_log`, `weight_log`,
+  `water_log` (singular) with RLS. The working insert RPCs in 20260516 actually write to
+  plural-named tables: `food_logs`, `exercise_logs`, `weight_logs`, `water_logs`, `sleep_logs`.
+  Those plural tables may already exist in prod — we use CREATE TABLE IF NOT EXISTS so this
+  script is safe either way. We also ensure RLS, policies, indexes, and REPLICA IDENTITY
+  are present.
+
+  NO existing data is mutated. NO columns are dropped. NO types are changed.
+*/
+
+-- ─── food_logs ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS food_logs (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date            date NOT NULL DEFAULT CURRENT_DATE,
+  meal            text NOT NULL DEFAULT 'snacks',
+  food_id         text NOT NULL DEFAULT '',
+  food_name       text NOT NULL DEFAULT '',
+  servings        numeric NOT NULL DEFAULT 1,
+  calories        int NOT NULL DEFAULT 0,
+  protein_g       numeric NOT NULL DEFAULT 0,
+  carbs_g         numeric NOT NULL DEFAULT 0,
+  fat_g           numeric NOT NULL DEFAULT 0,
+  quantity        numeric NOT NULL DEFAULT 1,
+  unit            text NOT NULL DEFAULT 'g',
+  created_at      timestamptz DEFAULT now()
+);
+
+ALTER TABLE food_logs ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "food_logs read own" ON food_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "food_logs insert own" ON food_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "food_logs delete own" ON food_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS food_logs_user_date ON food_logs(user_id, date);
+
+-- ─── exercise_logs ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS exercise_logs (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date             date NOT NULL DEFAULT CURRENT_DATE,
+  exercise_id      text NOT NULL DEFAULT '',
+  name             text NOT NULL DEFAULT '',
+  type             text NOT NULL DEFAULT 'cardio',
+  duration_min     int NOT NULL DEFAULT 0,
+  calories_burned  numeric NOT NULL DEFAULT 0,
+  distance_km      numeric NOT NULL DEFAULT 0,
+  avg_speed        numeric NOT NULL DEFAULT 0,
+  step_count       int NOT NULL DEFAULT 0,
+  integrity_score  numeric NOT NULL DEFAULT 0,
+  verified         boolean NOT NULL DEFAULT false,
+  source           text NOT NULL DEFAULT 'MANUAL',
+  created_at       timestamptz DEFAULT now()
+);
+
+ALTER TABLE exercise_logs ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "exercise_logs read own" ON exercise_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "exercise_logs insert own" ON exercise_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "exercise_logs delete own" ON exercise_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS exercise_logs_user_date ON exercise_logs(user_id, date);
+
+-- ─── weight_logs ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS weight_logs (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date       date NOT NULL DEFAULT CURRENT_DATE,
+  weight_kg  numeric NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (user_id, date)
+);
+
+ALTER TABLE weight_logs ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "weight_logs read own" ON weight_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "weight_logs insert own" ON weight_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "weight_logs update own" ON weight_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS weight_logs_user_date ON weight_logs(user_id, date);
+
+-- ─── water_logs ───────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS water_logs (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date       date NOT NULL DEFAULT CURRENT_DATE,
+  litres     numeric NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (user_id, date)
+);
+
+ALTER TABLE water_logs ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "water_logs read own" ON water_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "water_logs insert own" ON water_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "water_logs update own" ON water_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS water_logs_user_date ON water_logs(user_id, date);
+
+-- ─── sleep_logs ───────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS sleep_logs (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  date       date NOT NULL DEFAULT CURRENT_DATE,
+  bed_time   text NOT NULL DEFAULT '',
+  wake_time  text NOT NULL DEFAULT '',
+  duration   numeric NOT NULL DEFAULT 0,
+  quality    text NOT NULL DEFAULT '',
+  notes      text NOT NULL DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (user_id, date)
+);
+
+ALTER TABLE sleep_logs ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "sleep_logs read own" ON sleep_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "sleep_logs insert own" ON sleep_logs FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "sleep_logs update own" ON sleep_logs FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "sleep_logs delete own" ON sleep_logs FOR DELETE TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS sleep_logs_user_date ON sleep_logs(user_id, date);
+
+/* ===== 20260922000002_enable_realtime.sql ===== */
+/*
+  Realtime Migration 2 — Enable Supabase Realtime on all tables
+  (Pure additive. No schema, data, or behavior changes for existing queries.)
+
+  Two steps per table:
+  1. REPLICA IDENTITY FULL  → UPDATE/DELETE events include the OLD row in WAL.
+                              Without this, DELETE events don't contain row data
+                              so the client can't tell which ID to remove.
+  2. Add to publication      → Supabase realtime (logical decoding) only emits
+                              changes for tables in the `supabase_realtime`
+                              publication. We use ALL TABLES + set publish for
+                              insert/update/delete to keep it simple.
+
+  Idempotent — safe to re-run. Does not touch application SQL.
+*/
+
+-- ─── Step 1: REPLICA IDENTITY FULL ────────────────────────────────────────────
+-- Each ALTER is guarded so the script never fails if a table doesn't exist yet
+-- in a given environment. Safe to run in any order / any project state.
+DO $$ BEGIN ALTER TABLE profiles               REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE food_logs              REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE exercise_logs          REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE weight_logs            REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE water_logs             REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE sleep_logs             REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE subscriptions          REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE squad_feed             REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE squad_comments         REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE challenge_participants REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE user_points            REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
+-- Also cover the singular tables from the initial migration so future refactors
+-- can choose either name without losing events.
+DO $$ BEGIN ALTER TABLE food_log     REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE exercise_log REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE weight_log   REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE water_log    REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
+-- ─── Step 2: Publication ──────────────────────────────────────────────────────
+-- Supabase dashboard manual equivalent:
+--   Replication → Toggle each table ON for the `supabase_realtime` publication.
+BEGIN;
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+  CREATE PUBLICATION supabase_realtime FOR ALL TABLES;
+  ALTER PUBLICATION supabase_realtime SET (publish = 'insert, update, delete, truncate');
+COMMIT;
+
+/* ===== 20260922000003_create_user_points_and_leaderboard.sql ===== */
+/*
+  Realtime Migration 3 — user_points table + real leaderboard function
+  (Additive, idempotent, zero-downtime. NO existing data mutated.)
+
+  Why: The app's awardPoints() already upserts into `user_points`
+  (AppContext.js) but no migration ever created that table, and the
+  leaderboard UIs ranked against a hardcoded MOCK_LEADERBOARD. This
+  migration creates the table with safe RLS and exposes a SECURITY
+  DEFINER `get_leaderboard()` aggregate that joins profiles for display
+  name/plan and computes a real current streak from activity dates.
+
+  DEPENDENCY: Apply AFTER 20260922000001 (create_plural_log_tables.sql).
+  get_leaderboard() reads food_logs + exercise_logs for the streak, so
+  those tables must exist first.
+*/
+
+-- ─── user_points ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.user_points (
+  user_id    uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  total      bigint NOT NULL DEFAULT 0,
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.user_points ENABLE ROW LEVEL SECURITY;
+
+-- Users may read/write ONLY their own row. The public leaderboard is served
+-- through the SECURITY DEFINER function below, so we deliberately do NOT grant
+-- a read-all policy on the raw table.
+DO $$ BEGIN
+  CREATE POLICY "user_points select own" ON public.user_points
+    FOR SELECT TO authenticated USING (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "user_points insert own" ON public.user_points
+    FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "user_points update own" ON public.user_points
+    FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Keep realtime UPDATE/DELETE events carrying the old row (publication already
+-- covers ALL TABLES from migration 2, including this one).
+ALTER TABLE public.user_points REPLICA IDENTITY FULL;
+
+-- ─── get_leaderboard() ────────────────────────────────────────────────────────
+-- Returns ranked rows: rank, user_id, name, plan, points, streak.
+-- streak = current consecutive-day run of any logged activity (food or
+-- exercise), counting a run that ended yesterday as still active.
+CREATE OR REPLACE FUNCTION public.get_leaderboard(p_limit integer DEFAULT 50)
+RETURNS TABLE(rank bigint, user_id uuid, name text, plan text, points bigint, streak integer)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  WITH distinct_days AS (
+    SELECT DISTINCT user_id, date FROM (
+      SELECT user_id, date FROM food_logs
+      UNION
+      SELECT user_id, date FROM exercise_logs
+    ) a
+  ),
+  grouped AS (
+    SELECT user_id, date,
+           date - (ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY date))::integer AS grp
+    FROM distinct_days
+  ),
+  streak_runs AS (
+    SELECT user_id, grp, MAX(date) AS end_date, COUNT(*)::integer AS len
+    FROM grouped
+    GROUP BY user_id, grp
+  ),
+  current_streak AS (
+    SELECT DISTINCT ON (user_id) user_id, len AS streak
+    FROM streak_runs
+    WHERE end_date >= CURRENT_DATE - 1
+    ORDER BY user_id, end_date DESC
+  )
+  SELECT
+    ROW_NUMBER() OVER (ORDER BY up.total DESC, up.user_id) AS rank,
+    up.user_id                                            AS user_id,
+    COALESCE(NULLIF(p.name, ''), 'WeGoFit Member')        AS name,
+    COALESCE(NULLIF(p.subscription_status, ''), NULLIF(p.subscription, ''), 'free') AS plan,
+    up.total                                              AS points,
+    COALESCE(cs.streak, 0)                                AS streak
+  FROM user_points up
+  LEFT JOIN profiles p        ON p.id = up.user_id
+  LEFT JOIN current_streak cs ON cs.user_id = up.user_id
+  WHERE up.total > 0
+  ORDER BY up.total DESC, up.user_id
+  LIMIT p_limit;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_leaderboard(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_leaderboard(integer) TO authenticated;
+
+/* ===== 20260922000004_create_badges_and_meal_plans.sql ===== */
+-- badges_earned + meal_plans
+-- The app writes to both (AppContext.unlockBadge -> badges_earned, AppContext.saveMealPlan -> meal_plans)
+-- but no migration ever created them, so every write silently failed (wrapped in try/catch).
+-- Idempotent: safe to re-run.
+
+-- ── TABLES ────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.badges_earned (
+  id        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id   uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  badge_id  text NOT NULL,
+  earned_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, badge_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.meal_plans (
+  user_id      uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  week_start   text NOT NULL,
+  plan_data    jsonb NOT NULL DEFAULT '{}'::jsonb,
+  generated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, week_start)
+);
+
+-- ── ROW LEVEL SECURITY ────────────────────────────────────────────────────────
+ALTER TABLE public.badges_earned ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meal_plans    ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  DROP POLICY IF EXISTS badges_earned_own_select ON public.badges_earned;
+  DROP POLICY IF EXISTS badges_earned_own_insert ON public.badges_earned;
+  DROP POLICY IF EXISTS badges_earned_own_delete ON public.badges_earned;
+  DROP POLICY IF EXISTS meal_plans_own_select    ON public.meal_plans;
+  DROP POLICY IF EXISTS meal_plans_own_insert    ON public.meal_plans;
+  DROP POLICY IF EXISTS meal_plans_own_update    ON public.meal_plans;
+  DROP POLICY IF EXISTS meal_plans_own_delete    ON public.meal_plans;
+END $$;
+
+CREATE POLICY badges_earned_own_select ON public.badges_earned
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY badges_earned_own_insert ON public.badges_earned
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY badges_earned_own_delete ON public.badges_earned
+  FOR DELETE TO authenticated USING (auth.uid() = user_id);
+
+CREATE POLICY meal_plans_own_select ON public.meal_plans
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY meal_plans_own_insert ON public.meal_plans
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY meal_plans_own_update ON public.meal_plans
+  FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY meal_plans_own_delete ON public.meal_plans
+  FOR DELETE TO authenticated USING (auth.uid() = user_id);
+
+-- ── GRANTS ────────────────────────────────────────────────────────────────────
+GRANT ALL ON TABLE public.badges_earned TO authenticated, service_role;
+GRANT ALL ON TABLE public.meal_plans    TO authenticated, service_role;
+
+-- ── REALTIME (guarded so it cannot fail if publication/table state differs) ───
+DO $$ BEGIN ALTER TABLE public.badges_earned REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE public.meal_plans    REPLICA IDENTITY FULL; EXCEPTION WHEN undefined_table THEN NULL; END $$;

@@ -8,7 +8,7 @@ import { Ctx, useTheme } from "../contexts/AppContext"
 import { AuthCtx } from "../contexts/AuthContext"
 import { Card, PrimaryBtn, Row, Spacer } from "../components/shared"
 import { BadgeCard } from "./MealPlannerScreen"
-import { BADGES, BADGE_CATEGORIES, RARITY_CONFIG, MILESTONE_LEVELS, MOCK_LEADERBOARD, MOCK_FEED, PRESET_CHALLENGES, CHALLENGE_TYPE_COLORS, POINTS } from "../data/community"
+import { BADGES, BADGE_CATEGORIES, RARITY_CONFIG, MILESTONE_LEVELS, MOCK_FEED, PRESET_CHALLENGES, CHALLENGE_TYPE_COLORS, POINTS } from "../data/community"
 import { timeAgo } from "../utils/mealPlan"
 import { supabase } from "../lib/supabase"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -61,6 +61,7 @@ export function BadgeUnlockOverlay({ badge, onClose, onShare, onViewAll }) {
 
 // ─── CHALLENGE PROGRESS SCREEN ────────────────────────────────────────────────
 export function ChallengeProgressScreen({ challenge, progress, onBack }) {
+  const { leaderboard } = useContext(Ctx);
   const pct = Math.min(progress / challenge.goal.target, 1);
   const typeColor = CHALLENGE_TYPE_COLORS[challenge.type] || ROSE;
   const today = new Date();
@@ -83,8 +84,9 @@ export function ChallengeProgressScreen({ challenge, progress, onBack }) {
     return { dayNum, isDone, isCurrent, isFuture };
   });
 
-  const myRank = MOCK_LEADERBOARD.filter(u => u.points > (progress * 10)).length + 1;
-  const top3   = MOCK_LEADERBOARD.slice(0, 3);
+  const board  = leaderboard || [];
+  const myRank = board.filter(u => u.points > (progress * 10)).length + 1;
+  const top3   = board.slice(0, 3);
 
   // SVG ring params
   const R = 70, CIRC = 2 * Math.PI * R;
@@ -239,7 +241,7 @@ export function ChallengeProgressScreen({ challenge, progress, onBack }) {
 
 // ─── COMMUNITY SCREEN ─────────────────────────────────────────────────────────
 export function CommunityScreen({ navigation }) {
-  const { userPoints, unlockedBadges, awardPoints, unlockBadge, profile, dayLog } = useContext(Ctx);
+  const { userPoints, unlockedBadges, awardPoints, unlockBadge, profile, dayLog, leaderboard, fetchLeaderboard } = useContext(Ctx);
   const { session } = useContext(AuthCtx);
   const { theme } = useTheme();
 
@@ -270,6 +272,9 @@ export function CommunityScreen({ navigation }) {
   const isCoachSession  = session?.userType === "coach";
   const COACH_EMAILS    = ["gofit.fitnessapp@gmail.com", "arintina77@gmail.com"];
   const isCoach         = isCoachSession || COACH_EMAILS.includes((currentEmail || "").toLowerCase());
+
+  // Load the real leaderboard when this screen mounts
+  useEffect(() => { fetchLeaderboard?.(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   // Show community standards once per device
   useEffect(() => {
@@ -540,10 +545,12 @@ export function CommunityScreen({ navigation }) {
     }
   }
 
-  // My rank on leaderboard (mock: append current user if points available)
+  // My rank on the real leaderboard (fall back to counting higher scores)
   const myPoints = userPoints || 0;
-  const myRank   = MOCK_LEADERBOARD.filter(u => u.points > myPoints).length + 1;
-  const aheadOf  = MOCK_LEADERBOARD.find(u => u.rank === myRank - 1);
+  const board    = leaderboard || [];
+  const meOnBoard = board.find(u => u.isUser);
+  const myRank   = meOnBoard ? meOnBoard.rank : board.filter(u => u.points > myPoints).length + 1;
+  const aheadOf  = board.find(u => u.rank === myRank - 1);
 
   const CHALLENGE_TYPE_ICONS = { nutrition:"🥗", workout:"🏃", water:"💧", weight_loss:"⚖️", sleep:"😴" };
 
@@ -616,8 +623,10 @@ export function CommunityScreen({ navigation }) {
 
   // ── LEADERBOARD TAB ──
   function LeaderboardTab() {
-    const top3  = MOCK_LEADERBOARD.slice(0, 3);
-    const rest  = MOCK_LEADERBOARD.slice(3);
+    const hasPodium = board.length >= 3;
+    const top3  = hasPodium ? board.slice(0, 3) : [];
+    const rest  = hasPodium ? board.slice(3) : board;
+    const totalPts = board.reduce((s, u) => s + (u.points || 0), 0);
     const podiumColors = [
       { bg: "rgba(245,158,11,0.12)", border: "#F59E0B", medal: "🥇", label: "1st" },
       { bg: "#1E2837", border: "#9CA3AF", medal: "🥈", label: "2nd" },
@@ -629,7 +638,7 @@ export function CommunityScreen({ navigation }) {
 
         {/* Stats row */}
         <Row style={{ gap: 8, marginBottom: 20 }}>
-          {[{ v: "47", l: "Active Members" }, { v: "12,840", l: "Total Points" }, { v: "284", l: "Challenges Done" }].map(s => (
+          {[{ v: String(board.length), l: "Active Members" }, { v: totalPts.toLocaleString(), l: "Total Points" }, { v: meOnBoard ? `#${meOnBoard.rank}` : "--", l: "Your Rank" }].map(s => (
             <View key={s.l} style={{ flex: 1, backgroundColor: "#1E2837", borderRadius: 12, padding: 12,
               alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
               <Text style={{ color: ROSE, fontWeight: "800", fontSize: 18 }}>{s.v}</Text>
@@ -652,6 +661,7 @@ export function CommunityScreen({ navigation }) {
         </Row>
 
         {/* Top 3 podium */}
+        {hasPodium && (
         <View style={{ marginBottom: 20 }}>
           {/* 1st place */}
           <View style={{ alignItems: "center", marginBottom: 8 }}>
@@ -686,10 +696,17 @@ export function CommunityScreen({ navigation }) {
             ))}
           </Row>
         </View>
+        )}
 
-        {/* Rank 4-10 */}
+        {board.length === 0 && (
+          <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, textAlign: "center", paddingVertical: 24 }}>
+            No one's on the board yet — points appear as the squad logs meals & workouts.
+          </Text>
+        )}
+
+        {/* Rank 4+ */}
         {rest.map(u => (
-          <View key={u.rank} style={{ backgroundColor: "#111827", borderRadius: 14, padding: 14, marginBottom: 8,
+          <View key={u.user_id || u.rank} style={{ backgroundColor: "#111827", borderRadius: 14, padding: 14, marginBottom: 8,
             borderWidth: 1, borderColor: "rgba(255,255,255,0.06)", flexDirection: "row", alignItems: "center" }}>
             <Text style={{ color: "rgba(255,255,255,0.45)", fontWeight: "700", fontSize: 16, width: 28 }}>#{u.rank}</Text>
             <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: u.color,
@@ -956,7 +973,7 @@ export function CommunityScreen({ navigation }) {
           <Text style={{ color: theme.text, fontSize: 22, fontWeight: "800" }}>WeGoFit Squad 🏆</Text>
           <Text style={{ color: theme.textSub, fontSize: 13, marginTop: 2 }}>Challenges · Leaderboard · Feed</Text>
         </View>
-        <Image source={LOGO_URI} style={{ width: 80, height: 40, resizeMode: "contain" }} />
+        <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 80, height: 40, resizeMode: "contain" }} />
       </View>
 
       {/* Tab bar */}

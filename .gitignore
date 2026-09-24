@@ -23,6 +23,7 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+.trae/
 .DS_Store
 *.suo
 *.ntvs*
@@ -41,6 +42,9 @@ dist-ssr
 .env.*.local
 mobile/.env
 supabase/.env
+supabase/.secrets.env
+.secrets.env
+*.secrets.env
 
 # -----------------------------
 # Mobile / Expo (mobile/)
@@ -50,6 +54,7 @@ mobile/.expo
 mobile/.expo-shared
 mobile/expo-home
 mobile/.cache
+mobile/.npm
 mobile/assets/*.bak
 # Expo web build in mobile folder:
 mobile/web-build
