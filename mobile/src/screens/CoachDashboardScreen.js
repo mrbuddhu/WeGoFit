@@ -5,7 +5,7 @@ import S from "../lib/styles";
 import { ROSE, C, SH, LOGO_URI, COACH_CREDENTIALS, PLAN_PRICE, planMRR } from "../lib/constants";
 import { AuthCtx } from "../contexts/AuthContext";
 import { Card, PrimaryBtn, SecondaryBtn, Row, Spacer } from "../components/shared";
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── COACH DASHBOARD ──────────────────────────────────────────────────────────
@@ -1430,8 +1430,8 @@ export function CoachSettings() {
             { l: "App Name",         v: "WeGoFit"                       },
             { l: "Coach",            v: "TinaBarks"                     },
             { l: "Email",            v: COACH_CREDENTIALS.email         },
-            { l: "Monthly Price",    v: "$20 / month"                   },
-            { l: "Annual Price",     v: "$16 / mo ($192/year)"          },
+            { l: "Monthly Price",    v: "$9.99 / month"                 },
+            { l: "Annual Price",     v: "$6.67 / mo ($79.99/year)"      },
             { l: "Free Trial",       v: "7 days"                        },
           ].map(r => (
             <Row key={r.l} style={{ justifyContent: "space-between", paddingVertical: 8,
@@ -1499,15 +1499,24 @@ export function CoachChangePwModal({ visible, onClose }) {
   async function handleUpdate() {
     setError("");
     if (!curPw) { setError("Enter your current password."); return; }
-    if (btoa(curPw) !== COACH_CREDENTIALS.password) { setError("Current password is incorrect."); return; }
     if (!newPw || newPw.length < 6) { setError("New password must be at least 6 characters."); return; }
     if (!match) { setError("New passwords do not match."); return; }
     setBusy(true);
-    COACH_CREDENTIALS.password = btoa(newPw);
-    await new Promise(r => setTimeout(r, 600));
-    setBusy(false);
-    setDone(true);
-    setTimeout(() => { onClose(); reset(); }, 1800);
+    try {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: COACH_CREDENTIALS.email,
+        password: curPw,
+      });
+      if (signInErr) throw new Error("Current password is incorrect.");
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+      if (updateErr) throw new Error(updateErr.message);
+      setBusy(false);
+      setDone(true);
+      setTimeout(() => { onClose(); reset(); }, 1800);
+    } catch (e) {
+      setBusy(false);
+      setError(e?.message || "Failed to update password. Please try again.");
+    }
   }
 
   const coachNewPwRef  = useRef(null);

@@ -9,7 +9,7 @@ import { Ctx, useTheme } from "../contexts/AppContext";
 import { AuthCtx } from "../contexts/AuthContext";
 import { calcTargets, todayKey } from "../utils/calculations";
 import { Card, PrimaryBtn, Row, Spacer } from "../components/shared";
-import { PrivacyPolicyScreen, TermsOfServiceScreen } from "../App";
+import { PrivacyPolicyScreen, TermsOfServiceScreen } from "./LegalScreens";
 
 export function OnboardingScreen() {
   const { completeOnboarding } = useContext(Ctx);

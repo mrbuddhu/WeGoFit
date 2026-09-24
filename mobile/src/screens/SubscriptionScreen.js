@@ -284,7 +284,7 @@ export function SubscriptionScreen({ onSubscribed, expiredTrial, trialStats, onB
           )}
         </View>
         {/* Centre logo */}
-        <Image source={LOGO_URI} style={{ width: 90, height: 40, resizeMode: "contain" }} />
+        <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 90, height: 40, resizeMode: "contain" }} />
         {/* Right slot — balanced spacer */}
         <View style={{ flex: 1 }} />
       </View>
@@ -404,9 +404,11 @@ export function SubscriptionScreen({ onSubscribed, expiredTrial, trialStats, onB
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text style={{ fontWeight: "800", fontSize: 20, color: plan === "monthly" ? ROSE : "#FFFFFF" }}>
-                UGX 74,000
+                {formatPrice("monthly", currency)}
               </Text>
-              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>/ month · ($20)</Text>
+              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                {`/ month${currency === "UGX" ? ` · (${formatPrice("monthly", "USD")})` : ""}`}
+              </Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -428,13 +430,15 @@ export function SubscriptionScreen({ onSubscribed, expiredTrial, trialStats, onB
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: "700", fontSize: 16, color: "#FFFFFF" }}>Annual</Text>
-              <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>Best results · Save $48 · Coach TinaBarks' top pick 👑</Text>
+              <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>Best results · Save on annual billing · Coach TinaBarks' top pick 👑</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text style={{ fontWeight: "800", fontSize: 20, color: plan === "annual" ? ROSE : "#FFFFFF" }}>
-                UGX 710,000
+                {formatPrice("annual", currency)}
               </Text>
-              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>/ year · ($192)</Text>
+              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                {`/ year${currency === "UGX" ? ` · (${formatPrice("annual", "USD")})` : ""}`}
+              </Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -470,7 +474,7 @@ export function SubscriptionScreen({ onSubscribed, expiredTrial, trialStats, onB
           {loading
             ? <ActivityIndicator color="#FFF" />
             : <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 17 }}>
-                Subscribe Now — {plan === "annual" ? "UGX 710,000" : "UGX 74,000"}
+                Subscribe Now — {formatPrice(plan, currency)}
               </Text>
           }
         </TouchableOpacity>

@@ -6,23 +6,85 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "wegofit",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#070B14"
+    },
     "plugins": [
-      "expo-location",
-      "expo-notifications"
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "WeGoFit uses your location to track outdoor workouts."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF6B35"
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "app.wegofit.mobile",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "WeGoFit uses your location to track outdoor workouts."
+        "NSLocationWhenInUseUsageDescription": "WeGoFit uses your location to track outdoor workouts.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "WeGoFit uses your location to track outdoor workout routes.",
+        "NSMotionUsageDescription": "WeGoFit uses motion sensors to count steps and track workouts.",
+        "NSUserTrackingUsageDescription": "WeGoFit does not track you across apps. This permission is required by iOS and is not used.",
+        "UIUserInterfaceStyle": "Dark",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#070B14"
       }
     },
     "android": {
+      "package": "app.wegofit.mobile",
+      "versionCode": 1,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACTIVITY_RECOGNITION",
-        "POST_NOTIFICATIONS"
-      ]
+        "POST_NOTIFICATIONS",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#070B14"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "wegofit"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#070B14"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "TODO-REPLACE-WITH-EAS-PROJECT-ID-AFTER-EAS-LOGIN"
+      }
     }
   }
 }

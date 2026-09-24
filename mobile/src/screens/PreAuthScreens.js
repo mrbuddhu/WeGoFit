@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, FlatList, Modal } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
@@ -8,7 +8,7 @@ import { ROSE, C, SH, LOGO_URI } from "../lib/constants";
 import { AuthCtx } from "../contexts/AuthContext";
 import { Card, PrimaryBtn, Row, Spacer, KeyboardSafeView } from "../components/shared";
 import { calcTargets, calcBMI, getBMICategory, getSafeCalorieTarget, getCalorieRangeNote, getReferenceRange, calcBMR, calcTDEE, todayKey } from "../utils/calculations";
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Asset } from "expo-asset";
 
@@ -16,13 +16,6 @@ import { Asset } from "expo-asset";
 // These render before the user creates an account:
 // CoachWelcomeScreen → OnboardingScreen (goal) → BiggestChallengeScreen → TellUsAboutYouScreen → AuthScreen → SubscriptionScreen
 
-const SECURITY_QUESTIONS = [
-  "What is your mother's maiden name?",
-  "What was the name of your first pet?",
-  "What city were you born in?",
-  "What was your childhood nickname?",
-  "What is your oldest sibling's name?",
-];
 
 export function PreAuthCoachWelcomeScreen({ onNext }) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -371,9 +364,6 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
   const [suConfirm,    setSuConfirm]    = useState("");
   const [suShowPw,     setSuShowPw]     = useState(false);
   const [suShowConf,   setSuShowConf]   = useState(false);
-  const [secQ,         setSecQ]         = useState("");
-  const [secA,         setSecA]         = useState("");
-  const [showSecQ,     setShowSecQ]     = useState(false);
   const [agreed,       setAgreed]       = useState(false);
   const [suError,      setSuError]      = useState("");
   const [suBusy,       setSuBusy]       = useState(false);
@@ -382,7 +372,6 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
   const emailRef   = useRef(null);
   const pwRef      = useRef(null);
   const confRef    = useRef(null);
-  const secARef    = useRef(null);
 
   async function handleCreate() {
     Keyboard.dismiss();
@@ -391,8 +380,6 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
     if (!suPassword)              { setSuError("Please enter a password."); return; }
     if (suPassword !== suConfirm) { setSuError("Passwords do not match."); return; }
     if (suPassword.length < 6)   { setSuError("Password must be at least 6 characters."); return; }
-    if (!secQ)                   { setSuError("Please select a security question."); return; }
-    if (!secA.trim())            { setSuError("Please answer your security question."); return; }
     if (!agreed)                 { setSuError("Please agree to the Terms of Service."); return; }
     setSuBusy(true); setSuError("");
     try {
@@ -404,7 +391,7 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
       };
       await AsyncStorage.setItem("gofit_pending_onboarding", JSON.stringify(pending));
     } catch (_e) {}
-    const result = await signUp({ name: suName.trim(), email: suEmail, password: suPassword, securityQuestion: secQ, securityAnswer: secA });
+    const result = await signUp({ name: suName.trim(), email: suEmail, password: suPassword });
     setSuBusy(false);
     if (!result.ok) { setSuError(result.error); return; }
     try {
@@ -521,8 +508,8 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
               <TextInput ref={confRef} style={[SU_INPUT, { paddingRight: 48 }, focused === "conf" && { borderColor: ROSE }]}
                 placeholder="Repeat password" placeholderTextColor="rgba(255,255,255,0.35)"
                 value={suConfirm} onChangeText={v => { setSuConfirm(v); setSuError(""); }}
-                secureTextEntry={!suShowConf} autoCapitalize="none" autoCorrect={false} returnKeyType="next"
-                onSubmitEditing={() => { Keyboard.dismiss(); setShowSecQ(true); }} blurOnSubmit={false}
+                secureTextEntry={!suShowConf} autoCapitalize="none" autoCorrect={false} returnKeyType="done"
+                onSubmitEditing={handleCreate} blurOnSubmit={false}
                 onFocus={() => setFocused("conf")} onBlur={() => setFocused(null)} />
               <TouchableOpacity onPress={() => setSuShowConf(v => !v)}
                 style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 46, alignItems: "center", justifyContent: "center" }}>
@@ -533,34 +520,6 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
                   }
                 </Svg>
               </TouchableOpacity>
-            </View>
-
-            {/* Security Question */}
-            <Text style={SU_LABEL}>Security Question</Text>
-            <TouchableOpacity onPress={() => { Keyboard.dismiss(); setShowSecQ(true); }}
-              style={{ height: 50, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 14,
-                borderWidth: 1, borderColor: secQ ? ROSE : "rgba(255,255,255,0.15)",
-                paddingHorizontal: 14, justifyContent: "center", flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-              <Text style={{ color: secQ ? "#FFFFFF" : "rgba(255,255,255,0.35)", fontSize: 13, flex: 1 }} numberOfLines={1}>
-                {secQ || "Select a security question…"}
-              </Text>
-              <Text style={{ color: "rgba(255,255,255,0.35)", fontSize: 14 }}>▾</Text>
-            </TouchableOpacity>
-
-            <Text style={SU_LABEL}>Security Answer</Text>
-            <View style={{ position: "relative", marginBottom: 4 }}>
-              <View style={{ position: "absolute", left: 14, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-                <Svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <Path d="M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="rgba(255,255,255,0.4)" strokeWidth="1.7"/>
-                  <Path d="M12 8v4l3 3" stroke="rgba(255,255,255,0.4)" strokeWidth="1.7" strokeLinecap="round"/>
-                </Svg>
-              </View>
-              <TextInput ref={secARef} style={[SU_INPUT, focused === "seca" && { borderColor: ROSE }]}
-                placeholder="Your answer" placeholderTextColor="rgba(255,255,255,0.35)"
-                value={secA} onChangeText={v => { setSecA(v); setSuError(""); }}
-                autoCapitalize="none" autoCorrect={false} returnKeyType="done"
-                onSubmitEditing={handleCreate}
-                onFocus={() => setFocused("seca")} onBlur={() => setFocused(null)} />
             </View>
 
             {/* Terms checkbox */}
@@ -599,37 +558,6 @@ export function AccountCreationScreen({ onNext, onBack, pendingGoal, pendingAbou
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-      {/* Security question picker */}
-      <Modal visible={showSecQ} animationType="slide" transparent presentationStyle="overFullScreen">
-        <TouchableWithoutFeedback onPress={() => setShowSecQ(false)} accessible={false}>
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
-            <TouchableWithoutFeedback accessible={false}>
-              <View style={{ backgroundColor: "#14142A", borderTopLeftRadius: 26, borderTopRightRadius: 26,
-                paddingHorizontal: 24, paddingBottom: 48, paddingTop: 18,
-                borderTopWidth: 1, borderColor: "rgba(255,107,53,0.25)" }}>
-                <View style={{ width: 36, height: 4, backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 2,
-                  alignSelf: "center", marginBottom: 20 }} />
-                <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800", marginBottom: 16 }}>
-                  Select Security Question
-                </Text>
-                {SECURITY_QUESTIONS.map(q => (
-                  <TouchableOpacity key={q} onPress={() => { setSecQ(q); setShowSecQ(false); }}
-                    style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.07)",
-                      flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ flex: 1, color: "rgba(255,255,255,0.82)", fontSize: 14, lineHeight: 20 }}>{q}</Text>
-                    {secQ === q && <Text style={{ color: ROSE, fontSize: 18, fontWeight: "700" }}>✓</Text>}
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity onPress={() => setShowSecQ(false)}
-                  style={{ alignItems: "center", marginTop: 16, padding: 10 }}>
-                  <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </View>
   );
 }

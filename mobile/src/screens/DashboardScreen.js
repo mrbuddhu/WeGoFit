@@ -13,11 +13,10 @@ import { getAllWorkoutSessions } from "../utils/workoutProgress";
 import { Card, PrimaryBtn, Row, Spacer, CalRing, MacroBar, WaterWidget, AddFoodModal } from "../components/shared";
 import { FOODS, COUNTRY_FLAGS } from "../data/foods";
 import { EXERCISES } from "../data/exercises";
-import { MOCK_LEADERBOARD } from "../data/community";
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 export function DashboardScreen({ navigation }) {
-  const { profile, dayLog, todaySleep, mealPlan, isPremium, userPoints, unlockedBadges, storageClientId } = useContext(Ctx);
+  const { profile, dayLog, todaySleep, mealPlan, isPremium, userPoints, unlockedBadges, storageClientId, leaderboard } = useContext(Ctx);
   const { theme } = useTheme();
   const { unreadCoachMessages } = useContext(PaywallCtx);
   const [addMeal,          setAddMeal]          = useState(null);
@@ -86,7 +85,7 @@ export function DashboardScreen({ navigation }) {
         {/* Header */}
         <Row style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <View>
-            <Image source={LOGO_URI} style={{ width: 160, height: 65, resizeMode: "contain" }} />
+            <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 160, height: 65, resizeMode: "contain" }} />
             <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 13 }}>{greeting},</Text>
             <Text style={S.heading}>{profile?.name || "Athlete"} 👋</Text>
           </View>
@@ -383,9 +382,9 @@ export function DashboardScreen({ navigation }) {
             </View>
             <View style={{ flex: 1, alignItems: "center", backgroundColor: "#1E2837", borderRadius: 12, padding: 10 }}>
               <Text style={{ color: "#F59E0B", fontWeight: "800", fontSize: 20 }}>
-                {MOCK_LEADERBOARD.findIndex(e => e.isUser) >= 0 ? `#${MOCK_LEADERBOARD.findIndex(e => e.isUser) + 1}` : "--"}
+                {(() => { const me = (leaderboard || []).find(e => e.isUser); return me ? `#${me.rank}` : "--"; })()}
               </Text>
-              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2 }}>This Week</Text>
+              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2 }}>Your Rank</Text>
             </View>
           </Row>
         </TouchableOpacity>

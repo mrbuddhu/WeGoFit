@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import S from "../lib/styles";
-import { ROSE, ROSE_DIM, C, SH, LOGO_URI, COACH_CREDENTIALS } from "../lib/constants";
+import { ROSE, ROSE_DIM, C, SH, LOGO_URI } from "../lib/constants";
 import { AuthCtx } from "../contexts/AuthContext";
 import { Card, PrimaryBtn, Row, Spacer, KeyboardSafeView } from "../components/shared";
 import { supabase } from "../lib/supabase";
@@ -53,116 +53,45 @@ export function EyeBtn({ show, onToggle }) {
 // ─── FORGOT PASSWORD MODAL ────────────────────────────────────────────────────
 // 4-step in-app reset: email → security question → new password → success
 export function ForgotPasswordModal({ visible, onClose, onResetDone }) {
-  const { clients, updateClientPassword } = useContext(AuthCtx);
-
-  // step: "email" | "question" | "newpass" | "success"
   const [step,         setStep]         = useState("email");
   const [fpEmail,      setFpEmail]      = useState("");
   const [fpError,      setFpError]      = useState("");
   const [busy,         setBusy]         = useState(false);
-
-  // Step 2 — security question
-  const [foundUser,    setFoundUser]    = useState(null); // the client object
-  const [sqAnswer,     setSqAnswer]     = useState("");
-  const [sqError,      setSqError]      = useState("");
-  const [attempts,     setAttempts]     = useState(0);
-  const MAX_ATTEMPTS = 3;
-
-  // Step 3 — new password
-  const [newPw,        setNewPw]        = useState("");
-  const [confPw,       setConfPw]       = useState("");
-  const [showNew,      setShowNew]      = useState(false);
-  const [showConf,     setShowConf]     = useState(false);
-  const [pwBusy,       setPwBusy]       = useState(false);
   const [fpFocused,    setFpFocused]    = useState(null);
-  const confPwRef = useRef(null);
-
-  const str   = pwStrengthFull(newPw);
-  const match = newPw.length >= 6 && confPw.length > 0 && newPw === confPw;
 
   function resetAll() {
     setStep("email"); setFpEmail(""); setFpError(""); setBusy(false);
-    setFoundUser(null); setSqAnswer(""); setSqError(""); setAttempts(0);
-    setNewPw(""); setConfPw(""); setShowNew(false); setShowConf(false); setPwBusy(false);
   }
 
   function close() { onClose(); setTimeout(resetAll, 400); }
 
   function validateEmailFmt(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim()); }
 
-  // STEP 1 — find account by email
-  async function handleEmailContinue() {
+  async function handleSendResetEmail() {
     setFpError("");
     const trimmed = fpEmail.trim().toLowerCase();
     if (!trimmed) { setFpError("Please enter your email."); return; }
     if (!validateEmailFmt(trimmed)) { setFpError("Invalid email format."); return; }
     setBusy(true);
-    await new Promise(r => setTimeout(r, 400)); // brief pause for UX
-    setBusy(false);
-
-    // Coach shortcut — skip security question
-    if (trimmed === COACH_CREDENTIALS.email.toLowerCase()) {
-      setFoundUser({ id: COACH_CREDENTIALS.id, email: COACH_CREDENTIALS.email, isCoach: true });
-      setStep("newpass");
-      return;
-    }
-
-    const user = clients.find(c => c.email.toLowerCase() === trimmed);
-    if (!user) {
-      setFpError("⚠️ No WeGoFit account found with that email address.\nDouble-check or create a new account.");
-      return;
-    }
-    setFoundUser(user);
-    setStep("question");
-  }
-
-  // STEP 2 — verify security answer
-  function handleVerifyAnswer() {
-    setSqError("");
-    const trimmedAnswer = sqAnswer.trim().toLowerCase();
-    if (!trimmedAnswer) { setSqError("Please enter your answer."); return; }
-
-    // If user has no security answer stored, accept any non-empty answer (fallback for old accounts)
-    const storedAnswer = foundUser?.securityAnswer || "";
-    const correct = storedAnswer ? btoa(trimmedAnswer) === storedAnswer : true;
-
-    if (correct) {
-      setStep("newpass");
-    } else {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      if (newAttempts >= MAX_ATTEMPTS) {
-        setSqError(`🔒 Too many incorrect attempts. Please contact Coach TinaBarks at:\nsupport@wegofit.app`);
-      } else {
-        setSqError(`❌ Incorrect answer. Please try again. (${MAX_ATTEMPTS - newAttempts} attempt${MAX_ATTEMPTS - newAttempts !== 1 ? "s" : ""} remaining)`);
-      }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: "wegofit://reset-password",
+      });
+      if (error) throw error;
+      setBusy(false);
+      setStep("success");
+    } catch (e) {
+      setBusy(false);
+      setFpError(e?.message || "Could not send reset email. Please try again or contact support.");
     }
   }
 
-  // STEP 3 — save new password
-  async function handleUpdatePassword() {
-    if (!newPw || newPw.length < 6) return;
-    if (!match) return;
-    setPwBusy(true);
-
-    if (foundUser?.isCoach) {
-      // Coach: update in COACH_CREDENTIALS via AsyncStorage override key
-      await AsyncStorage.setItem("gofit_coach_pw_override", btoa(newPw));
-    } else {
-      await updateClientPassword(foundUser.email, newPw);
-    }
-
-    setPwBusy(false);
-    setStep("success");
-  }
-
-  // Pill for progress steps
   function StepDots({ current }) {
-    const steps = ["email","question","newpass","success"];
+    const steps = ["email", "success"];
     const idx   = steps.indexOf(current);
     return (
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 20 }}>
-        {[0,1,2,3].map(i => (
+        {[0,1].map(i => (
           <View key={i} style={{ width: i === idx ? 20 : 8, height: 8, borderRadius: 4,
             backgroundColor: i <= idx ? ROSE : "#E0E0E0" }} />
         ))}
@@ -189,12 +118,12 @@ export function ForgotPasswordModal({ visible, onClose, onResetDone }) {
               <StepDots current="email" />
               <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginBottom: 6 }}>🔑 Reset Password</Text>
               <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 8, lineHeight: 20 }}>
-                Enter your WeGoFit account email to reset your password right here.
+                Enter your WeGoFit account email and we'll send you a secure link to reset your password.
               </Text>
               <View style={{ backgroundColor: "rgba(16,185,129,0.1)", borderRadius: 10, padding: 10, marginBottom: 18,
                 borderWidth: 1, borderColor: "rgba(16,185,129,0.3)" }}>
                 <Text style={{ color: "#10B981", fontSize: 12, lineHeight: 18 }}>
-                  ✅ WeGoFit resets passwords in-app — simple and instant, no email required.
+                  🔒 Secure server-side reset. No passwords stored on your device.
                 </Text>
               </View>
               {fpError ? (
@@ -208,12 +137,12 @@ export function ForgotPasswordModal({ visible, onClose, onResetDone }) {
                 placeholder="your@email.com" placeholderTextColor="rgba(255,255,255,0.3)"
                 value={fpEmail} onChangeText={v => { setFpEmail(v); setFpError(""); }}
                 keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
-                returnKeyType="done" onSubmitEditing={handleEmailContinue}
+                returnKeyType="done" onSubmitEditing={handleSendResetEmail}
                 onFocus={() => setFpFocused("fpemail")} onBlur={() => setFpFocused(null)} />
-              <TouchableOpacity onPress={handleEmailContinue} disabled={busy}
+              <TouchableOpacity onPress={handleSendResetEmail} disabled={busy}
                 style={{ backgroundColor: ROSE, borderRadius: 14, paddingVertical: 16, alignItems: "center",
                   opacity: busy ? 0.7 : 1, shadowColor: ROSE, shadowRadius: 8, shadowOpacity: 0.25, shadowOffset: { width: 0, height: 3 } }}>
-                {busy ? <ActivityIndicator color="#FFF" /> : <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 16 }}>Continue →</Text>}
+                {busy ? <ActivityIndicator color="#FFF" /> : <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 16 }}>Send Reset Email →</Text>}
               </TouchableOpacity>
               <TouchableOpacity onPress={close} style={{ alignItems: "center", marginTop: 16, padding: 8 }}>
                 <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 14 }}>Cancel</Text>
@@ -221,126 +150,27 @@ export function ForgotPasswordModal({ visible, onClose, onResetDone }) {
             </>
           )}
 
-          {/* ── STEP 2: SECURITY QUESTION ── */}
-          {step === "question" && foundUser && (
-            <>
-              <StepDots current="question" />
-              <View style={{ backgroundColor: "rgba(16,185,129,0.1)", borderRadius: 12, padding: 12, marginBottom: 18,
-                borderWidth: 1, borderColor: "rgba(16,185,129,0.3)" }}>
-                <Text style={{ color: "#10B981", fontWeight: "700", fontSize: 14 }}>✅ Account Found!</Text>
-                <Text style={{ color: "#10B981", fontSize: 13, marginTop: 2 }}>{foundUser.email} is registered with WeGoFit.</Text>
-              </View>
-              <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginBottom: 6 }}>Security Question</Text>
-              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
-                To protect your account, please answer your security question:
-              </Text>
-              <View style={{ backgroundColor: "rgba(255,107,53,0.08)", borderRadius: 12, padding: 14, marginBottom: 16,
-                borderWidth: 1, borderColor: ROSE_DIM }}>
-                <Text style={{ color: ROSE, fontSize: 14, fontWeight: "700", lineHeight: 20 }}>
-                  {foundUser.securityQuestion || "What year were you born?"}
-                </Text>
-              </View>
-              {sqError ? (
-                <View style={{ backgroundColor: "#FEF2F2", borderRadius: 10, padding: 12, marginBottom: 14,
-                  borderWidth: 1, borderColor: "#FECACA" }}>
-                  <Text style={{ color: "#EF4444", fontSize: 13, lineHeight: 18 }}>{sqError}</Text>
-                </View>
-              ) : null}
-              {attempts < MAX_ATTEMPTS && (
-                <>
-                  <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, fontWeight: "600", marginBottom: 6 }}>Your Answer</Text>
-                  <TextInput style={[S.input, { marginBottom: 20 }, fpFocused === "sqans" && S.inputFocused]}
-                    placeholder="Your answer..." placeholderTextColor="rgba(255,255,255,0.3)"
-                    value={sqAnswer} onChangeText={v => { setSqAnswer(v); setSqError(""); }}
-                    autoCapitalize="none" autoCorrect={false}
-                    returnKeyType="done" onSubmitEditing={handleVerifyAnswer}
-                    onFocus={() => setFpFocused("sqans")} onBlur={() => setFpFocused(null)} />
-                  <TouchableOpacity onPress={handleVerifyAnswer}
-                    style={{ backgroundColor: ROSE, borderRadius: 14, paddingVertical: 16, alignItems: "center",
-                      shadowColor: ROSE, shadowRadius: 8, shadowOpacity: 0.25, shadowOffset: { width: 0, height: 3 } }}>
-                    <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 16 }}>Verify Answer</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              <TouchableOpacity onPress={() => { setStep("email"); setSqAnswer(""); setSqError(""); setAttempts(0); }}
-                style={{ alignItems: "center", marginTop: 16, padding: 8 }}>
-                <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 14 }}>← Back</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {/* ── STEP 3: NEW PASSWORD ── */}
-          {step === "newpass" && (
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <StepDots current="newpass" />
-              <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginBottom: 6 }}>🔒 Create New Password</Text>
-              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
-                Choose a strong new password for your account.
-              </Text>
-
-              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, fontWeight: "600", marginBottom: 6 }}>New Password</Text>
-              <View style={{ position: "relative", justifyContent: "center", marginBottom: 8 }}>
-                <TextInput style={[S.input, { paddingRight: 50 }, fpFocused === "newpw" && S.inputFocused]}
-                  placeholder="New password" placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={newPw} onChangeText={setNewPw}
-                  secureTextEntry={!showNew} autoCapitalize="none" autoCorrect={false}
-                  returnKeyType="next" onSubmitEditing={() => confPwRef.current?.focus()} blurOnSubmit={false}
-                  onFocus={() => setFpFocused("newpw")} onBlur={() => setFpFocused(null)} />
-                <EyeBtn show={showNew} onToggle={() => setShowNew(v => !v)} />
-              </View>
-              {newPw.length > 0 && (
-                <View style={{ marginBottom: 14 }}>
-                  <View style={{ height: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 3, marginBottom: 4 }}>
-                    <View style={{ height: 6, borderRadius: 3, backgroundColor: str.color, width: `${str.pct * 100}%` }} />
-                  </View>
-                  <Text style={{ color: str.color, fontSize: 12, fontWeight: "600" }}>{str.level}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 2 }}>Use 8+ chars, numbers & symbols</Text>
-                </View>
-              )}
-
-              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, fontWeight: "600", marginBottom: 6 }}>Confirm New Password</Text>
-              <View style={{ position: "relative", justifyContent: "center", marginBottom: 8 }}>
-                <TextInput ref={confPwRef} style={[S.input, { paddingRight: 50 }, fpFocused === "confpw" && S.inputFocused]}
-                  placeholder="Repeat password" placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={confPw} onChangeText={setConfPw}
-                  secureTextEntry={!showConf} autoCapitalize="none" autoCorrect={false}
-                  returnKeyType="done" onSubmitEditing={handleUpdatePassword}
-                  onFocus={() => setFpFocused("confpw")} onBlur={() => setFpFocused(null)} />
-                <EyeBtn show={showConf} onToggle={() => setShowConf(v => !v)} />
-              </View>
-              {confPw.length > 0 && (
-                <Text style={{ color: match ? "#22C55E" : "#EF4444", fontSize: 13, fontWeight: "600", marginBottom: 16 }}>
-                  {match ? "✅ Passwords match" : "❌ Passwords don't match"}
-                </Text>
-              )}
-
-              <TouchableOpacity onPress={handleUpdatePassword} disabled={pwBusy || !match}
-                style={{ backgroundColor: ROSE, borderRadius: 14, paddingVertical: 16, alignItems: "center",
-                  opacity: pwBusy || !match ? 0.45 : 1, marginTop: 4,
-                  shadowColor: ROSE, shadowRadius: 8, shadowOpacity: match ? 0.25 : 0, shadowOffset: { width: 0, height: 3 } }}>
-                {pwBusy ? <ActivityIndicator color="#FFF" /> : <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 16 }}>Update Password</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={close} style={{ alignItems: "center", marginTop: 16, padding: 8 }}>
-                <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 14 }}>Cancel</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          )}
-
-          {/* ── STEP 4: SUCCESS ── */}
+          {/* ── STEP 2: SUCCESS / EMAIL SENT ── */}
           {step === "success" && (
             <View style={{ alignItems: "center", paddingVertical: 24 }}>
               <StepDots current="success" />
-              <Text style={{ fontSize: 64 }}>✅</Text>
+              <Text style={{ fontSize: 64 }}>📧</Text>
               <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>
-                Password Updated!
+                Check Your Email
+              </Text>
+              <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 8 }}>
+                We've sent a secure password reset link to:
+              </Text>
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700", textAlign: "center", marginBottom: 20 }}>
+                {fpEmail}
               </Text>
               <Text style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
-                Your WeGoFit password has been successfully changed.{"\n"}You can now log in with your new password.
+                Tap the link in the email to set a new password.{"\n"}If you don't see it, check your Spam/Junk folder.
               </Text>
-              <TouchableOpacity onPress={() => { if (onResetDone) onResetDone(foundUser?.email || fpEmail); close(); }}
+              <TouchableOpacity onPress={() => { if (onResetDone) onResetDone(fpEmail); close(); }}
                 style={{ backgroundColor: ROSE, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 48,
                   alignItems: "center", shadowColor: ROSE, shadowRadius: 8, shadowOpacity: 0.25, shadowOffset: { width: 0, height: 3 } }}>
-                <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 16 }}>Go to Login</Text>
+                <Text style={{ color: "#FFF", fontWeight: "800", fontSize: 16 }}>Back to Login</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -417,14 +247,6 @@ function AuthIconPerson() {
     </View>
   );
 }
-
-const SECURITY_QUESTIONS = [
-  "What is your mother's maiden name?",
-  "What was the name of your first pet?",
-  "What city were you born in?",
-  "What was your childhood nickname?",
-  "What is your oldest sibling's name?",
-];
 
 // ─── AUTH SCREEN (Sign In only — Create Account redirects to onboarding) ──────
 export function AuthScreen({ onCreateAccount }) {
@@ -612,7 +434,7 @@ export function AuthScreen({ onCreateAccount }) {
           position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: "#0F0F19", justifyContent: "center", alignItems: "center", zIndex: 20,
         }}>
-          <Image source={LOGO_URI} style={{ width: 180, height: 80, resizeMode: "contain", opacity: 0.9 }} />
+          <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 180, height: 80, resizeMode: "contain", opacity: 0.9 }} />
           <ActivityIndicator color="#FF6B35" size="small" style={{ marginTop: 20 }} />
         </View>
       )}

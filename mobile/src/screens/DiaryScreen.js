@@ -37,7 +37,7 @@ export function DiaryScreen({ navigation, nutritionSubBar }) {
         )}
         <Row style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
           <Text style={[S.heading, { color: theme.text }]}>Food Diary 📖</Text>
-          <Image source={LOGO_URI} style={{ width: 80, height: 40, resizeMode: "contain" }} />
+          <Image source={require("../../assets/Enhanced_Logo.PNG")} style={{ width: 80, height: 40, resizeMode: "contain" }} />
         </Row>
         <Text style={{ color: theme.textSub, fontSize: 13, marginBottom: 16 }}>{todayKey()}</Text>
 

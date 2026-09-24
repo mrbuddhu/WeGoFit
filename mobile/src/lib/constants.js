@@ -25,15 +25,13 @@ const C = {
 
 const ROSE     = "#FF6B35";
 const ROSE_DIM = "#FF8C5A";
-const LOGO_URI = { uri: "/Enhanced_Logo.PNG" };
+const LOGO_URI = null;
 
-const VIP_ACCOUNTS = [
-  "arintina77@gmail.com",
-  "gofit.fitnessapp@gmail.com",
-];
+const VIP_ACCOUNTS = [];
 
 function isVIPAccount(email) {
-  return VIP_ACCOUNTS.includes(email?.toLowerCase().trim());
+  if (!email) return false;
+  return VIP_ACCOUNTS.includes(email.toLowerCase().trim());
 }
 
 const COACH_CREDENTIALS = {
@@ -41,7 +39,6 @@ const COACH_CREDENTIALS = {
   type:     "coach",
   name:     "TinaBarks",
   email:    "gofit.fitnessapp@gmail.com",
-  password: btoa("WeGoFit@Coach2026!"),
   role:     "admin",
 };
 
@@ -56,11 +53,10 @@ function planMRR(clients) {
 }
 
 const PESAPAL_ORDER_URL =
-  (process.env.EXPO_PUBLIC_SUPABASE_URL || "https://dthlhxochcwcjduuugbv.supabase.co") +
+  (process.env.EXPO_PUBLIC_SUPABASE_URL || "") +
   "/functions/v1/pesapal-order";
 const SUPABASE_ANON_KEY_FOR_EDGE =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0aGxoeG9jaGN3Y2pkdXV1Z2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMzk5OTksImV4cCI6MjA5MzkxNTk5OX0.j8J6HHuI7u_3L8TxrZoGGyV4n5amfT766uuya18iVHk";
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
 const PLAN_PRICES = {
   monthly: { USD: 9.99, UGX: 38000 },
