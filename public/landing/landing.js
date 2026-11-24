@@ -66,6 +66,35 @@
     });
   });
 
+  // Light / dark: follows the device until the visitor picks one.
+  var rootEl = d.documentElement;
+  function applyTheme(t) {
+    rootEl.setAttribute('data-theme', t);
+    d.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+      m.setAttribute('content', t === 'light' ? '#faf7f2' : '#14110e');
+    });
+  }
+  d.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var next = rootEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      try {
+        localStorage.setItem('wgf-theme', next);
+      } catch (e) {}
+      applyTheme(next);
+    });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    var follow = function () {
+      var saved = null;
+      try {
+        saved = localStorage.getItem('wgf-theme');
+      } catch (e) {}
+      if (saved !== 'light' && saved !== 'dark') applyTheme(mq.matches ? 'light' : 'dark');
+    };
+    if (mq.addEventListener) mq.addEventListener('change', follow);
+  }
+
   // Header: solid once scrolled; mobile menu.
   var header = d.querySelector('[data-header]');
   var btn = d.querySelector('[data-menu-btn]');
